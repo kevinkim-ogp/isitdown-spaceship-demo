@@ -17,11 +17,11 @@ import { APP_VERSION_HEADER_KEY } from '~/constants/version'
 import { env } from '~/env.mjs'
 import { createBaseLogger } from '~/lib/logger'
 import { type Context } from './context'
+import { users } from './modules/auth/users.store'
 import {
   transformUserToMeSelect,
   type DefaultMeSelect,
 } from './modules/me/me.select'
-import { users } from './modules/auth/users.store'
 
 const t = initTRPC.context<Context>().create({
   /**
@@ -150,16 +150,17 @@ const authMiddleware = t.middleware(async ({ next, ctx }) => {
 })
 
 const nonStrictAuthMiddleware = t.middleware(async ({ next, ctx }) => {
-  // this code path is needed if a user does not exist in the database as they were deleted, but the session was active before
+  // Get user from in-memory store if session exists
   let user: DefaultMeSelect | null = null
 
   if (ctx.session?.userId) {
-    try {
-      const dbUser = await User.get(ctx.session.userId)
-      user = transformUserToMeSelect(dbUser)
-    } catch {
-      // User not found, user remains null
-      user = null
+    const inMemoryUser = users.get(ctx.session.userId)
+    if (inMemoryUser) {
+      user = {
+        email: inMemoryUser.email,
+        name: inMemoryUser.name || null,
+        image: inMemoryUser.image || null,
+      }
     }
   }
 
