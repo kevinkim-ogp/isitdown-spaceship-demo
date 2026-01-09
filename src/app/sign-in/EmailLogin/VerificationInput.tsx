@@ -100,8 +100,8 @@ export const VerificationInput = (): JSX.Element | null => {
     return resendOtpMutation.mutate(
       { email: vfnStepData.email },
       {
-        onSuccess: ({ email, otpPrefix }) => {
-          setVfnStepData({ email, otpPrefix })
+        onSuccess: ({ email }) => {
+          setVfnStepData({ email, otpPrefix: 'dummy1' })
           resetField('token')
           setFocus('token')
           // On success, restart the timer before this can be called again.
