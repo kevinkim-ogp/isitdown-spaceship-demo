@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      # add more branches here for this job to run on
+      # - staging
+      # - production
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  install:
+    name: Install dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+  unit-integration-tests:
+    name: Unit & integration tests
+    needs:
+      - install
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Test
+        run: npm run test:coverage
