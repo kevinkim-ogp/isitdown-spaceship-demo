@@ -7,6 +7,7 @@ import {
   UpdateReportStatusSchema,
 } from '~/schemas/report.schema'
 import { protectedProcedure, publicProcedure, router } from '~/server/trpc'
+import { users } from '../auth/users.store'
 import {
   generateAuthenticatedMockData,
   generatePublicMockData,
@@ -188,12 +189,25 @@ export const reportsRouter = router({
     return sortedIssues
   }),
 
-  // Protected endpoint to submit a report
-  submitReport: protectedProcedure
+  // Public endpoint to submit a report (works for both authenticated and unauthenticated users)
+  submitReport: publicProcedure
     .input(CreateReportSchema)
     .mutation(async ({ ctx, input }) => {
       const { service, issueType, comment } = input
-      const { email, name } = ctx.user
+
+      // Get user info if authenticated, otherwise use anonymous
+      let email: string
+      let name: string | undefined
+
+      if (ctx.session?.userId) {
+        const user = users.get(ctx.session.userId)
+        email = user?.email || `anonymous-${Date.now()}@demo.gov.sg`
+        name = user?.name
+      } else {
+        // Unauthenticated user - use anonymous identifier
+        email = `anonymous-${Date.now()}@demo.gov.sg`
+        name = undefined
+      }
 
       // Check for duplicate reports within 2 minutes (using in-memory store)
       const twoMinutesAgo = Date.now() - 2 * 60 * 1000
@@ -271,6 +285,11 @@ export const reportsRouter = router({
       }
 
       userSubmittedReports.set(reportId, report)
+
+      // Save session to ensure the session cookie is preserved in the response
+      if (ctx.session) {
+        await ctx.session.save()
+      }
 
       return report
     }),
@@ -355,12 +374,21 @@ export const reportsRouter = router({
     return { expired: reportsToExpire.length }
   }),
 
-  // Protected endpoint for "me too" functionality
-  reportMeToo: protectedProcedure
+  // Public endpoint for "me too" functionality (works for both authenticated and unauthenticated users)
+  reportMeToo: publicProcedure
     .input(MeTooSchema)
     .mutation(async ({ input, ctx }) => {
       const { reportId } = input
-      const { email } = ctx.user
+
+      // Get user email if authenticated, otherwise use anonymous
+      let email: string
+      if (ctx.session?.userId) {
+        const user = users.get(ctx.session.userId)
+        email = user?.email || `anonymous-${Date.now()}@demo.gov.sg`
+      } else {
+        // Unauthenticated user - use anonymous identifier
+        email = `anonymous-${Date.now()}@demo.gov.sg`
+      }
 
       // Handle mock reports - increment in-memory store
       if (reportId.startsWith('mock-')) {
@@ -436,6 +464,12 @@ export const reportsRouter = router({
         // Return success with the new total count (base + increments)
         const baseCount = mockReport.meTooCount || 0
         const newCount = baseCount + newIncrements
+
+        // Save session to ensure the session cookie is preserved in the response
+        if (ctx.session) {
+          await ctx.session.save()
+        }
+
         return { success: true, newCount }
       }
 
@@ -461,6 +495,11 @@ export const reportsRouter = router({
       report.meTooCount = currentCount + 1
       report.updatedAt = new Date().toISOString()
       userSubmittedReports.set(reportId, report)
+
+      // Save session to ensure the session cookie is preserved in the response
+      if (ctx.session) {
+        await ctx.session.save()
+      }
 
       return { success: true, newCount: currentCount + 1 }
     }),

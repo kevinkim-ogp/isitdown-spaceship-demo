@@ -23,7 +23,6 @@ import { useState } from 'react'
 import { AppFooter } from '~/components/AppFooter'
 import { AppGrid } from '~/templates/AppGrid'
 import { trpc } from '~/features/trpc'
-import { EnforceLoginStatePageWrapper } from '~/components/AuthWrappers'
 
 const SERVICE_OPTIONS = [
   { value: 'plumber', label: 'Plumber (OTP Login)' },
@@ -176,8 +175,7 @@ function ReportForm() {
 
 export default function ReportPage() {
   return (
-    <EnforceLoginStatePageWrapper>
-      <Flex flexDirection="column" minH="100vh" bg="base.canvas.default">
+    <Flex flexDirection="column" minH="100vh" bg="base.canvas.default">
         <Flex flexDirection="column" flex={1} py={8}>
           <AppGrid>
             <Box gridColumn={{ base: '1 / -1', md: '3 / 11', lg: '4 / 10' }}>
@@ -208,6 +206,5 @@ export default function ReportPage() {
           </Box>
         </AppGrid>
       </Flex>
-    </EnforceLoginStatePageWrapper>
   )
 }
