@@ -196,12 +196,15 @@ export const reportsRouter = router({
       const { service, issueType, comment } = input
 
       // Get user info if authenticated, otherwise use anonymous
+      // Note: ctx.session.userId IS the email (set during login)
       let email: string
       let name: string | undefined
 
       if (ctx.session?.userId) {
-        const user = users.get(ctx.session.userId)
-        email = user?.email || `anonymous-${Date.now()}@demo.gov.sg`
+        // Use the email directly from session (it's already the email)
+        email = ctx.session.userId
+        // Try to get additional user details from in-memory store (may not exist in serverless)
+        const user = users.get(email)
         name = user?.name
       } else {
         // Unauthenticated user - use anonymous identifier
@@ -381,10 +384,11 @@ export const reportsRouter = router({
       const { reportId } = input
 
       // Get user email if authenticated, otherwise use anonymous
+      // Note: ctx.session.userId IS the email (set during login)
       let email: string
       if (ctx.session?.userId) {
-        const user = users.get(ctx.session.userId)
-        email = user?.email || `anonymous-${Date.now()}@demo.gov.sg`
+        // Use the email directly from session (it's already the email)
+        email = ctx.session.userId
       } else {
         // Unauthenticated user - use anonymous identifier
         email = `anonymous-${Date.now()}@demo.gov.sg`

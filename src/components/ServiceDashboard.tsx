@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Box,
   Button,
@@ -67,6 +67,7 @@ export function ServiceDashboard() {
   const { hasAuthFlag } = useAuth()
   console.log('hasAuthFlag', hasAuthFlag)
   const toast = useToast()
+  const [pendingReportId, setPendingReportId] = useState<string | null>(null)
 
   const {
     data: services,
@@ -82,6 +83,7 @@ export function ServiceDashboard() {
         status: 'success',
         duration: 3000,
       })
+      setPendingReportId(null)
       refetch()
     },
     onError: (error) => {
@@ -91,10 +93,12 @@ export function ServiceDashboard() {
         status: 'error',
         duration: 5000,
       })
+      setPendingReportId(null)
     },
   })
 
   const handleMeToo = (reportId: string) => {
+    setPendingReportId(reportId)
     meTooMutation.mutate({ reportId })
   }
 
@@ -221,8 +225,8 @@ export function ServiceDashboard() {
                       colorScheme="blue"
                       variant="outline"
                       onClick={() => handleMeToo(service.id!)}
-                      isLoading={meTooMutation.isPending}
-                      isDisabled={!hasAuthFlag}
+                      isLoading={pendingReportId === service.id}
+                      isDisabled={!hasAuthFlag || pendingReportId !== null}
                     >
                       I'm also facing this issue
                     </Button>

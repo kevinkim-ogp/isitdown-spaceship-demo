@@ -11,6 +11,9 @@ import { appRouter } from '~/server/modules/app'
 const isProd = env.NODE_ENV === 'production' && env.IS_SPACESHIP_PREVIEW == true
 
 const handler = async (req: Request) => {
+  // Get the cookie store instance to use throughout the request
+  const cookieStore = await cookies()
+
   // Call the tRPC handler
   const response = await fetchRequestHandler({
     endpoint: '/api',
@@ -37,22 +40,27 @@ const handler = async (req: Request) => {
     },
   })
 
-  // Get cookies that were modified during the request
-  const cookieStore = await cookies()
+  // Check if iron-session already set a Set-Cookie header in the response
+  const existingSetCookie = response.headers.get('Set-Cookie')
+
+  // Get the session cookie after the tRPC handler has run (and potentially saved the session)
   const sessionCookie = cookieStore.get('auth.session-token')
 
-  // If there's a session cookie, ensure it's in the response
-  if (sessionCookie) {
+  // If there's a session cookie and iron-session didn't already set it, ensure it's in the response
+  if (sessionCookie && !existingSetCookie) {
     const newResponse = new Response(response.body, response)
-    newResponse.headers.set(
-      'Set-Cookie',
-      `${sessionCookie.name}=${sessionCookie.value}; Path=/; HttpOnly; SameSite=lax${
-        isProd ? '; Secure' : ''
-      }`,
-    )
+    // Include all cookie attributes - Max-Age is set by iron-session (7 days = 604800 seconds)
+    const maxAge = 60 * 60 * 24 * 7 // 7 days in seconds
+    const cookieValue = sessionCookie.value
+    const cookieString = `auth.session-token=${cookieValue}; Path=/; HttpOnly; SameSite=lax; Max-Age=${maxAge}${
+      isProd ? '; Secure' : ''
+    }`
+    newResponse.headers.set('Set-Cookie', cookieString)
     return newResponse
   }
 
+  // If iron-session already set the cookie, return the response as-is
+  // Otherwise, return the response (cookie might not exist if user is not logged in)
   return response
 }
 
